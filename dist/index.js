@@ -13,16 +13,28 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 require("reflect-metadata");
-const core_1 = require("@mikro-orm/core");
+const apollo_server_express_1 = require("apollo-server-express");
+const type_graphql_1 = require("type-graphql");
+const express_1 = __importDefault(require("express"));
+const hello_1 = require("./resolvers/hello");
 const mikro_orm_config_1 = __importDefault(require("./mikro-orm.config"));
-const Post_1 = require("./entities/Post");
+const core_1 = require("@mikro-orm/core");
+const posts_1 = require("./resolvers/posts");
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const orm = yield core_1.MikroORM.init(mikro_orm_config_1.default);
     yield orm.getMigrator().up();
-    const post = orm.em.create(Post_1.Post, { title: 'my first post' });
-    yield orm.em.persistAndFlush(post);
-    const posts = yield orm.em.find(Post_1.Post, {});
-    console.log(posts);
+    const app = express_1.default();
+    const apolloServer = new apollo_server_express_1.ApolloServer({
+        schema: yield type_graphql_1.buildSchema({
+            resolvers: [hello_1.HelloResolver, posts_1.PostResolver],
+            validate: false
+        }),
+        context: () => ({ em: orm.em })
+    });
+    apolloServer.applyMiddleware({ app });
+    app.listen(4444, () => {
+        console.log('server started on localhost:4444');
+    });
 });
 main().catch(err => {
     console.error(err);
